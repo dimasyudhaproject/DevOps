@@ -1,11 +1,9 @@
 /*
 TO-DO LISTS
- 1. Use sshpass to save SSH pass securely
- 2. Give example for VM with custom port using sshpass
- 3. Create separate variable for username & IP
- 4. Add info in each stage
- 5. Find flag to remove Docker image either it exists or not
- 6. How if branch contains numbers?
+ 1. Give example for VM with custom port using sshpass
+ 2. Add info in each stage
+ 3. Find flag to remove Docker image either it exists or not
+ 4. How if branch contains numbers?
 */
 
 pipeline {
@@ -15,7 +13,9 @@ pipeline {
     }
     environment {
         BRANCH = "${params.BRANCH}"
-        VM = "${BRANCH == 'dev' ? 'dimasyudha@123.163.194.154' : BRANCH == 'sit' ?  'dimasyudha@58.236.169.3' : BRANCH == 'uat' ? 'dimasyudha@154.226.218.75' : BRANCH == 'prod' && 'dimasyudha@196.172.27.77'}"
+        VM_IP = "${BRANCH == 'dev' ? '123.163.194.154' : BRANCH == 'sit' ?  '58.236.169.3' : BRANCH == 'uat' ? '154.226.218.75' : BRANCH == 'prod' && '196.172.27.77'}"
+        VM_USER = "${BRANCH == 'dev' ? 'dimas' : BRANCH == 'sit' ? 'yudha' : BRANCH == 'uat' ? 'pratama' : BRANCH == 'prod' && 'dimasyudha'}"
+        VM_PASS = credentials('vm-pass')
         BOT = credentials('bot-token')
         GROUP = credentials('group-id')
     }
@@ -26,8 +26,8 @@ pipeline {
         stage('Initialize Directory') {
             steps {
                 sh """
-                    ssh ${VM} mkdir -p /home/dimasyudha/mern
-                    ssh ${VM} mkdir -p /home/dimasyudha/mern/service
+                    sshpass -p '${VM_PASS}' ssh ${VM_USER}@${VM_IP} mkdir -p /home/dimasyudha/mern
+                    sshpass -p '${VM_PASS}' ssh ${VM_USER}@${VM_IP} mkdir -p /home/dimasyudha/mern/service
                 """
             }
         }
@@ -40,7 +40,7 @@ pipeline {
             steps {
                 sh """
                     cp -rf .env.${BRANCH} .env
-                    scp .env ${VM}:/home/dimasyudha/mern/service
+                    sshpass -p '${VM_PASS}' scp .env ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/service
                 """
             }
         }
@@ -62,10 +62,10 @@ pipeline {
         stage('Docker Compose') {
             steps {
                 sh """
-                    scp service/docker-compose.yml ${VM}:/home/dimasyudha/mern/service
-                    ssh ${VM} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml down
-                    ssh ${VM} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml pull
-                    ssh ${VM} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml up -d
+                    sshpass -p '${VM_PASS}' scp service/docker-compose.yml ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/service
+                    sshpass -p '${VM_PASS}' ssh ${VM_USER}@${VM_IP} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml down
+                    sshpass -p '${VM_PASS}' ssh ${VM_USER}@${VM_IP} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml pull
+                    sshpass -p '${VM_PASS}' ssh ${VM_USER}@${VM_IP} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml up -d
                 """
             }
         }
