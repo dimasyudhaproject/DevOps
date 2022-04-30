@@ -1,0 +1,95 @@
+/*
+TO-DO LISTS
+ 1. Use sshpass to save SSH pass securely
+ 2. Give example for VM with custom port using sshpass
+ 3. Create separate variable for username & IP
+ 4. Add info in each stage
+ 5. Find flag to remove Docker image either it exists or not
+ 6. How if branch contains numbers?
+*/
+
+pipeline {
+    agent any
+    tools {
+        nodejs('nodejs-16')
+    }
+    environment {
+        BRANCH = "${params.BRANCH}"
+        VM = "${BRANCH == 'dev' ? 'dimasyudha@123.163.194.154' : BRANCH == 'sit' ?  'dimasyudha@58.236.169.3' : BRANCH == 'uat' ? 'dimasyudha@154.226.218.75' : BRANCH == 'prod' && 'dimasyudha@196.172.27.77'}"
+        BOT = credentials('bot-token')
+        GROUP = credentials('group-id')
+    }
+    parameters {
+        gitParameter branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'BRANCH', type: 'PT_BRANCH'
+    }
+    stages {
+        stage('Initialize Directory') {
+            steps {
+                sh """
+                    ssh ${VM} mkdir -p /home/dimasyudha/mern
+                    ssh ${VM} mkdir -p /home/dimasyudha/mern/service
+                """
+            }
+        }
+        stage('NPM Install') {
+            steps {
+                sh 'npm i'
+            }
+        }
+        stage('Set Environment') {
+            steps {
+                sh """
+                    cp -rf .env.${BRANCH} .env
+                    scp .env ${VM}:/home/dimasyudha/mern/service
+                """
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t dimasyudha.com/mern-service .'
+            }
+        }
+        stage('Push to Nexus') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh """
+                        docker login -u ${USER} -p ${PASS} dimasyudha.com
+                        docker push dimasyudha.com/mern-service
+                    """
+                }
+            }
+        }
+        stage('Docker Compose') {
+            steps {
+                sh """
+                    scp service/docker-compose.yml ${VM}:/home/dimasyudha/mern/service
+                    ssh ${VM} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml down
+                    ssh ${VM} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml pull
+                    ssh ${VM} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml up -d
+                """
+            }
+        }
+        stage('Save Variable Value') {
+            steps {
+                script {
+                    TOKEN = "${BOT}"
+                    ID = "${GROUP}"
+                }
+            }
+        }
+    }
+    post {
+        always {
+            sh '''
+                docker image rm dimasyudha.com/mern-service
+                rm -rf ../mern-service
+            '''
+        }
+        success {
+            sh "curl -s -X POST https://api.telegram.org/bot${TOKEN}/sendMessage -d chat_id=${ID} -d 'parse_mode=HTML' -d text='Hello Success!'"
+        }
+        failure {
+            sh "curl -s -X POST https://api.telegram.org/bot${TOKEN}/sendMessage -d chat_id=${ID} -d 'parse_mode=HTML' -d text='Hello Failure!'"
+        }
+    }
+}
