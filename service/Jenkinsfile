@@ -46,7 +46,7 @@ pipeline {
         }
         stage('Docker Build') {
             steps {
-                sh 'docker build -t dimasyudha.com/mern-service .'
+                sh 'docker build -t dimasyudha.com/mern-service-${GIT_BRANCH} .'
             }
         }
         stage('Push to Nexus') {
@@ -54,7 +54,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh """
                         docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
-                        docker push dimasyudha.com/mern-service
+                        docker push dimasyudha.com/mern-service-${GIT_BRANCH}
                     """
                 }
             }
@@ -81,7 +81,7 @@ pipeline {
     post {
         always {
             sh '''
-                docker image rm dimasyudha.com/mern-service
+                docker image rm dimasyudha.com/mern-service-${GIT_BRANCH}
                 rm -rf ../mern-service
             '''
         }
