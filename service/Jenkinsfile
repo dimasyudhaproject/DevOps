@@ -46,7 +46,7 @@ pipeline {
         }
         stage('Docker Build') {
             steps {
-                sh 'docker build -t dimasyudha.com/mern-service-${GIT_BRANCH} .'
+                sh "docker build -t dimasyudha.com/mern-service-${GIT_BRANCH} ."
             }
         }
         stage('Push to Nexus') {
@@ -80,10 +80,10 @@ pipeline {
     }
     post {
         always {
-            sh '''
+            sh """
                 docker image rm dimasyudha.com/mern-service-${GIT_BRANCH}
                 rm -rf ../mern-service
-            '''
+            """
         }
         success {
             sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Hello Success!'"
