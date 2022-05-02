@@ -31,17 +31,17 @@ pipeline {
                 """
             }
         }
-        stage('NPM Install') {
-            steps {
-                sh 'npm i'
-            }
-        }
         stage('Set Environment') {
             steps {
                 sh """
                     cp -rf .env.${GIT_BRANCH} .env
                     sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/service
                 """
+            }
+        }
+        stage('NPM Install') {
+            steps {
+                sh 'npm i'
             }
         }
         stage('Docker Build') {
