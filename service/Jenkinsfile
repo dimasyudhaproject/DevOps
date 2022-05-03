@@ -82,7 +82,6 @@ pipeline {
         always {
             sh """
                 docker image rm dimasyudha.com/mern-service-${GIT_BRANCH}
-                rm -rf ../mern-service
             """
         }
         success {
