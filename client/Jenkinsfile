@@ -46,9 +46,9 @@ pipeline {
             steps {
                 script {
                     if (GIT_BRANCH == 'dev' || GIT_BRANCH == 'sit') {
-                        sh "docker build --target node -t dimasyudha.com/mern-client-${GIT_BRANCH} ."
+                        sh "docker build --target node --build-arg ENV=${GIT_BRANCH} -t dimasyudha.com/mern-client-${GIT_BRANCH} ."
                     } else {
-                        sh "docker build --target nginx -t dimasyudha.com/mern-client-${GIT_BRANCH} ."
+                        sh "docker build --target nginx --build-arg ENV=${GIT_BRANCH} -t dimasyudha.com/mern-client-${GIT_BRANCH} ."
                     }
                 }
             }
