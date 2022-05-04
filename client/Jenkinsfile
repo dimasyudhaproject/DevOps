@@ -5,6 +5,7 @@ TO-DO LISTS
  3. How if branch contains numbers?
  4. Use different port in docker-compose for different env
  5. Make sure that build folder & nginx.conf file are set in the exact folder
+ 6. Double check path to call nginx.conf in Dockerfile & nginx.conf itself
 */
 
 pipeline {
@@ -39,21 +40,6 @@ pipeline {
                     cp -rf .env.${GIT_BRANCH} .env
                     sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/client
                 """
-            }
-        }
-        stage('NPM Install') {
-            steps {
-                sh 'npm i'
-            }
-        }
-        stage('NPM Build') {
-            when {
-                expression {
-                    GIT_BRANCH == 'uat' || GIT_BRANCH == 'prod'
-                }
-            }
-            steps {
-                sh 'npm run build'
             }
         }
         stage('Docker Build') {

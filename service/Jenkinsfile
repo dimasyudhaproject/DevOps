@@ -39,11 +39,6 @@ pipeline {
                 """
             }
         }
-        stage('NPM Install') {
-            steps {
-                sh 'npm i'
-            }
-        }
         stage('Docker Build') {
             steps {
                 sh "docker build -t dimasyudha.com/mern-service-${GIT_BRANCH} ."
