@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  mern-client:
+    stdin_open: true
+    tty: true
+    image: "dimasyudha.com/mern-client-${ENV}"
+    container_name: mern-client
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
