@@ -3,6 +3,7 @@ services:
   mern-service:
     stdin_open: true
     tty: true
+    restart: always
     image: "dimasyudha.com/mern-service-${ENV}"
     container_name: mern-service
     ports:

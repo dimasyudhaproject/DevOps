@@ -3,9 +3,10 @@ services:
   mern-client:
     stdin_open: true
     tty: true
+    restart: always
     image: "dimasyudha.com/mern-client-${ENV}"
     container_name: mern-client
     ports:
-      - "3000:3000"
+      - "3000:${DOCKER_PORT}"
     env_file:
       - .env
