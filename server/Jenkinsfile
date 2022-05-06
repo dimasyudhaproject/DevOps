@@ -27,7 +27,7 @@ pipeline {
             steps {
                 sh """
                     sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/dimasyudha/mern
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/dimasyudha/mern/service
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/dimasyudha/mern/server
                 """
             }
         }
@@ -35,13 +35,13 @@ pipeline {
             steps {
                 sh """
                     cp -rf .env.${GIT_BRANCH} .env
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/service
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/server
                 """
             }
         }
         stage('Docker Build') {
             steps {
-                sh "docker build -t dimasyudha.com/mern-service-${GIT_BRANCH} ."
+                sh "docker build -t dimasyudha.com/mern-server-${GIT_BRANCH} ."
             }
         }
         stage('Push to Nexus') {
@@ -49,7 +49,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh """
                         docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
-                        docker push dimasyudha.com/mern-service-${GIT_BRANCH}
+                        docker push dimasyudha.com/mern-server-${GIT_BRANCH}
                     """
                 }
             }
@@ -57,10 +57,10 @@ pipeline {
         stage('Docker Compose') {
             steps {
                 sh """
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} service/docker-compose.yml ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/service
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml down
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml pull
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/service/docker-compose.yml up -d
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} server/docker-compose.yml ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/server
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/server/docker-compose.yml down
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/server/docker-compose.yml pull
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/server/docker-compose.yml up -d
                 """
             }
         }
@@ -76,7 +76,7 @@ pipeline {
     post {
         always {
             sh """
-                docker image rm dimasyudha.com/mern-service-${GIT_BRANCH}
+                docker image rm dimasyudha.com/mern-server-${GIT_BRANCH}
             """
         }
         success {

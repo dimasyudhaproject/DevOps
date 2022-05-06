@@ -1,11 +1,11 @@
 version: "3.8"
 services:
-  mern-service:
+  mern-server:
     stdin_open: true
     tty: true
     restart: always
-    image: "dimasyudha.com/mern-service-${ENV}"
-    container_name: mern-service
+    image: "dimasyudha.com/mern-server-${ENV}"
+    container_name: mern-server
     ports:
       - "3001:3001"
     env_file:
