@@ -4,11 +4,11 @@ COPY package.json .
 RUN npm install
 COPY . .
 CMD if [ "$ENV" = "dev" ]; \
-        then npm start:dev; \
+        then npm run start:dev; \
     else if [ "$ENV" = "sit" ]; \
-        then npm start:sit; \
+        then npm run start:sit; \
     else if [ "$ENV" = "uat" ]; \
-        then npm start:uat; \
+        then npm run start:uat; \
     else if [ "$ENV" = "prod" ]; \
-        then npm start:prod; \
+        then npm run start:prod; \
     fi
