@@ -6,9 +6,9 @@ COPY package.json .
 RUN npm install
 COPY . .
 CMD if [ "$ENV" = "dev" ]; \
-        then npm start:dev; \
+        then npm run start:dev; \
     else if [ "$ENV" = "sit" ]; \
-        then npm start:sit; \
+        then npm run start:sit; \
     fi
 RUN if [ "$ENV" = "uat" -o "$ENV" = "prod" ]; \
         then npm run build; \
