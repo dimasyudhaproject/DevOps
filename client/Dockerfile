@@ -5,8 +5,10 @@ WORKDIR /home
 COPY package.json .
 RUN npm install
 COPY . .
-CMD if [ "$ENV" = "dev" -o "$ENV" = "sit" ]; \
-        then npm start; \
+CMD if [ "$ENV" = "dev" ]; \
+        then npm start:dev; \
+    else if [ "$ENV" = "sit" ]; \
+        then npm start:sit; \
     fi
 RUN if [ "$ENV" = "uat" -o "$ENV" = "prod" ]; \
         then npm run build; \
