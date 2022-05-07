@@ -1,10 +1,9 @@
 /*
 TO-DO LISTS
  1. Add info in each stage
- 2. Find flag to remove Docker image either it exists or not
- 3. How if branch contains numbers?
- 4. Make sure that build folder & nginx.conf file are set in the exact folder
- 5. Double check path to call nginx.conf in Dockerfile & nginx.conf itself
+ 2. How if branch contains numbers?
+ 3. Make sure that build folder & nginx.conf file are set in the exact folder
+ 4. Double check path to call nginx.conf in Dockerfile & nginx.conf itself
 */
 
 pipeline {
@@ -56,6 +55,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh """
+                        sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
                         docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
                         docker push dimasyudha.com/mern-client-${GIT_BRANCH}
                     """
