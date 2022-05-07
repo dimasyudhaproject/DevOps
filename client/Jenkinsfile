@@ -24,6 +24,14 @@ pipeline {
         gitParameter branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'BRANCH', type: 'PT_BRANCH'
     }
     stages {
+        stage('Save Variable Value') {
+            steps {
+                script {
+                    BOT_TOKEN = "${BOT_TOKEN}"
+                    GROUP_ID = "${GROUP_ID}"
+                }
+            }
+        }
         stage('Initialize Directory') {
             steps {
                 sh """
@@ -70,14 +78,6 @@ pipeline {
                     sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/client/docker-compose.yml pull
                     sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/client/docker-compose.yml up -d
                 """
-            }
-        }
-        stage('Save Variable Value') {
-            steps {
-                script {
-                    BOT_TOKEN = "${BOT_TOKEN}"
-                    GROUP_ID = "${GROUP_ID}"
-                }
             }
         }
     }
