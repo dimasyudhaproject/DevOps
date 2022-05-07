@@ -3,9 +3,8 @@ TO-DO LISTS
  1. Add info in each stage
  2. Find flag to remove Docker image either it exists or not
  3. How if branch contains numbers?
- 4. Use different port in docker-compose for different env
- 5. Make sure that build folder & nginx.conf file are set in the exact folder
- 6. Double check path to call nginx.conf in Dockerfile & nginx.conf itself
+ 4. Make sure that build folder & nginx.conf file are set in the exact folder
+ 5. Double check path to call nginx.conf in Dockerfile & nginx.conf itself
 */
 
 pipeline {
@@ -85,14 +84,9 @@ pipeline {
     post {
         always {
             sh """
-                docker image rm dimasyudha.com/mern-client-${GIT_BRANCH}
+                docker image prune -f
+                curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: ${currentBuild.currentResult}\nTook: ${currentBuild.durationString}\nUser: ${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}\nJob: ${currentBuild.projectName}\nEnv: ${GIT_BRANCH}\nConsole: ${BUILD_URL}console'
             """
-        }
-        success {
-            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Hello Success!'"
-        }
-        failure {
-            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Hello Failure!'"
         }
     }
 }
