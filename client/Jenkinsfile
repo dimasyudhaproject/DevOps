@@ -59,15 +59,19 @@ pipeline {
                 }
             }
         }
-        stage('Push to Nexus') {
+        stage('Login to Nexus') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh """
                         sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
                         docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
-                        docker push dimasyudha.com/mern-client-${GIT_BRANCH}
                     """
                 }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                sh "docker push dimasyudha.com/mern-client-${GIT_BRANCH}"
             }
         }
         stage('Docker Compose') {
