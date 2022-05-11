@@ -33,8 +33,8 @@ pipeline {
         stage('Initialize Directory') {
             steps {
                 sh """
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/dimasyudha/mern
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/dimasyudha/mern/server
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/${VM_USER}/mern
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/${VM_USER}/mern/server
                 """
             }
         }
@@ -42,7 +42,7 @@ pipeline {
             steps {
                 sh """
                     cp -rf .env.${GIT_BRANCH} .env
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/server
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/${VM_USER}/mern/server
                 """
             }
         }
@@ -69,10 +69,10 @@ pipeline {
         stage('Docker Compose') {
             steps {
                 sh """
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} server/docker-compose.yml ${VM_USER}@${VM_IP}:/home/dimasyudha/mern/server
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/server/docker-compose.yml down
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/server/docker-compose.yml pull
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/dimasyudha/mern/server/docker-compose.yml up -d
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} server/docker-compose.yml ${VM_USER}@${VM_IP}:/home/${VM_USER}/mern/server
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/${VM_USER}/mern/server/docker-compose.yml down
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/${VM_USER}/mern/server/docker-compose.yml pull
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/${VM_USER}/mern/server/docker-compose.yml up -d
                 """
             }
         }
