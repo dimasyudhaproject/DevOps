@@ -81,8 +81,13 @@ pipeline {
         always {
             sh """
                 docker image prune -f
-                curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: ${currentBuild.currentResult}\nTook: ${currentBuild.durationString}\nUser: ${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}\nJob: ${currentBuild.projectName}\nEnv: ${GIT_BRANCH}\nConsole: ${BUILD_URL}console'
+                sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker image prune -f
             """
         }
-    }
+        success {
+            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: Success\nTook: ${currentBuild.durationString}\nUser: ${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}\nJob: ${currentBuild.projectName}\nEnv: ${GIT_BRANCH}\nConsole: ${BUILD_URL}console'"
+        }
+        failure {
+            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: Failure\nTook: ${currentBuild.durationString}\nUser: ${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}\nJob: ${currentBuild.projectName}\nEnv: ${GIT_BRANCH}\nConsole: ${BUILD_URL}console'"
+        }
 }
