@@ -26,7 +26,7 @@ pipeline {
         gitParameter branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'BRANCH', type: 'PT_BRANCH'
     }
     stages {
-        stage('Save Variable Value') {
+        stage('Variables for Telegram') {
             steps {
                 script {
                     BOT_TOKEN = "${BOT_TOKEN}"
@@ -66,7 +66,7 @@ pipeline {
                 }
             }
         }
-        stage('Login to Nexus') {
+        stage('Login to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
