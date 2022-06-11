@@ -12,7 +12,13 @@ $ sudo apt-get install sshpass -y
 $ sudo apt-get install curl -y
 ```
 
-3. Docker
+3. jq
+
+```bash
+$ sudo apt-get install jq -y
+```
+
+4. Docker
 
 ```bash
 $ sudo apt-get install ca-certificates gnupg lsb-release -y
@@ -20,7 +26,7 @@ $ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -
 $ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
 ```
 
-4. Docker Compose
+5. Docker Compose
 
 ```bash
 $ sudo apt-get install docker-compose-plugin -y
