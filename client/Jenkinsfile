@@ -84,7 +84,7 @@ pipeline {
         stage('Docker Compose') {
             steps {
                 sh """
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} client/docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/client
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/client
                     sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/client/docker-compose.yml down
                     sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/client/docker-compose.yml pull
                     sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/client/docker-compose.yml up -d
