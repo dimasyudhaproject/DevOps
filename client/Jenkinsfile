@@ -68,10 +68,10 @@ pipeline {
         }
         stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
-                        sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${DOCKER_USER} -p ${DOCKER_PASS} dimasyudha
-                        docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha
+                        sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+                        docker login -u ${NEXUS_USER} -p ${NEXUS_PASS}
                     """
                 }
             }
