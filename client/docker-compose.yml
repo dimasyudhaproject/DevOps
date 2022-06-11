@@ -4,7 +4,7 @@ services:
     stdin_open: true
     tty: true
     restart: always
-    image: "dimasyudha.com/mern-client-${ENV}"
+    image: "dimasyudha/mern-client-${ENV}:${APP_VERSION}"
     container_name: mern-client
     ports:
       - "3000:${DOCKER_PORT}"
