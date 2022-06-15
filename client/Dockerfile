@@ -1,7 +1,6 @@
 FROM node:16.15.0 as node
 ARG ENV
 ENV ENV=${ENV}
-RUN npm i -g yarn
 WORKDIR /home
 COPY package.json yarn.lock ./
 RUN yarn install --immutable --immutable-cache --check-cache
