@@ -10,84 +10,102 @@ pipeline {
         nodejs('nodejs-16')
     }
     environment {
-        GIT_BRANCH = "${params.BRANCH}"
-        VM_IP = "${GIT_BRANCH == 'dev' ? '123.163.194.154' : GIT_BRANCH == 'sit' ?  '58.236.169.3' : GIT_BRANCH == 'uat' ? '154.226.218.75' : GIT_BRANCH == 'prod' && '196.172.27.77'}"
-        VM_PORT = "${GIT_BRANCH == 'dev' ? '123' : GIT_BRANCH == 'sit' ? '58' : GIT_BRANCH == 'uat' ? '154' : GIT_BRANCH == 'prod' && '196'}"
-        VM_USER = "${GIT_BRANCH == 'dev' ? 'dimas' : GIT_BRANCH == 'sit' ? 'yudha' : GIT_BRANCH == 'uat' ? 'pratama' : GIT_BRANCH == 'prod' && 'dimasyudha'}"
+        BRANCH_NAME = "${params.BRANCH}"
+        VM_IP = "${BRANCH_NAME == 'sit' ?  '58.236.169.3' : BRANCH_NAME == 'uat' ? '154.226.218.75' : BRANCH_NAME == 'prod' ? '196.172.27.77' : '123.163.194.154'}"
+        VM_PORT = "${BRANCH_NAME == 'sit' ? '58' : BRANCH_NAME == 'uat' ? '154' : BRANCH_NAME == 'prod' ? '196' : '123'}"
+        VM_USER = "${BRANCH_NAME == 'sit' ? 'dimas' : BRANCH_NAME == 'uat' ? 'yudha' : BRANCH_NAME == 'prod' ? 'pratama' : 'root'}"
+        VM_ROOT_PATH = "${VM_USER == 'root' ? '/root' : `/home/${VM_USER}`}"
         VM_PASS = credentials('vm-pass')
         BOT_TOKEN = credentials('bot-token')
         GROUP_ID = credentials('group-id')
+        APP_VERSION = "${sh(script: 'jq -r .version package.json', returnStdout: true).trim()}"
     }
     parameters {
         gitParameter branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'BRANCH', type: 'PT_BRANCH'
     }
     stages {
-        stage('Save Variable Value') {
+        stage('Variables for Telegram') {
             steps {
                 script {
                     BOT_TOKEN = "${BOT_TOKEN}"
                     GROUP_ID = "${GROUP_ID}"
+                    TOOK = ""
+                    USER = "${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}"
+                    JOB = "${currentBuild.projectName}"
+                    ENV = "${BRANCH_NAME}"
+                    CONSOLE = "${BUILD_URL}/console"
                 }
             }
         }
         stage('Initialize Directory') {
             steps {
                 sh """
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/${VM_USER}/mern
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p /home/${VM_USER}/mern/server
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p ${VM_ROOT_PATH}/mern
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p ${VM_ROOT_PATH}/mern/server
                 """
             }
         }
         stage('Set Environment') {
             steps {
                 sh """
-                    cp -rf .env.${GIT_BRANCH} .env
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:/home/${VM_USER}/mern/server
+                    cp -rf .env.${BRANCH_NAME} .env
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server
                 """
             }
         }
         stage('Docker Build') {
             steps {
-                sh "docker build -t dimasyudha.com/mern-server-${GIT_BRANCH} ."
+                sh "docker build --build-arg ENV=${BRANCH_NAME} -t dimasyudha/mern-server-${BRANCH_NAME}:${APP_VERSION} ."
             }
         }
-        stage('Login to Nexus') {
+        stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
-                        sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
-                        docker login -u ${NEXUS_USER} -p ${NEXUS_PASS} dimasyudha.com
+                        sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+                        docker login -u ${NEXUS_USER} -p ${NEXUS_PASS}
                     """
                 }
             }
         }
         stage('Push Docker Image') {
             steps {
-                sh "docker push dimasyudha.com/mern-server-${GIT_BRANCH}"
+                sh "docker push dimasyudha/mern-server-${BRANCH_NAME}:${APP_VERSION}"
             }
         }
         stage('Docker Compose') {
             steps {
                 sh """
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} server/docker-compose.yml ${VM_USER}@${VM_IP}:/home/${VM_USER}/mern/server
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/${VM_USER}/mern/server/docker-compose.yml down
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/${VM_USER}/mern/server/docker-compose.yml pull
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f /home/${VM_USER}/mern/server/docker-compose.yml up -d
+                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml down
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml pull
+                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml up -d
                 """
             }
         }
     }
     post {
         always {
+            cleanWs()
+            dir("${env.WORKSPACE}@tmp") {
+                deleteDir()
+            }
+            dir("${env.WORKSPACE}@script") {
+                deleteDir()
+            }
+            dir("${env.WORKSPACE}@script@tmp") {
+                deleteDir()
+            }
             sh """
                 docker image prune -f
                 sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker image prune -f
             """
         }
         success {
-            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: Success\nTook: ${currentBuild.durationString}\nUser: ${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}\nJob: ${currentBuild.projectName}\nEnv: ${GIT_BRANCH}\nConsole: ${BUILD_URL}console'"
+            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: Success\nTook: ${TOOK}\nUser: ${USER}\nJob: ${JOB}\nEnv: ${ENV}\nConsole: ${CONSOLE}'"
         }
-        failure {
-            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: Failure\nTook: ${currentBuild.durationString}\nUser: ${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}\nJob: ${currentBuild.projectName}\nEnv: ${GIT_BRANCH}\nConsole: ${BUILD_URL}console'"
+         failure {
+            sh "curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage -d chat_id=${GROUP_ID} -d 'parse_mode=HTML' -d text='Result: Failure\nTook: ${TOOK}\nUser: ${USER}\nJob: ${JOB}\nEnv: ${ENV}\nConsole: ${CONSOLE}'"
         }
+    }
 }
