@@ -5,7 +5,7 @@ WORKDIR /home
 COPY package.json yarn.lock ./
 RUN yarn install --immutable --immutable-cache --check-cache
 COPY . .
-RUN npm run build
+RUN yarn build
 CMD if [ "$ENV" = "dev" ]; \
         then yarn dev; \
     else if [ "$ENV" = "sit" ]; \
