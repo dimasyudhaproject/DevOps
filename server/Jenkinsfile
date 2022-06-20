@@ -9,12 +9,15 @@ pipeline {
     tools {
         nodejs('nodejs-16')
     }
+    options {
+        parallelsAlwaysFailFast()
+    }
     environment {
         BRANCH_NAME = "${params.BRANCH}"
         VM_IP = "${BRANCH_NAME == 'sit' ?  '58.236.169.3' : BRANCH_NAME == 'uat' ? '154.226.218.75' : BRANCH_NAME == 'prod' ? '196.172.27.77' : '123.163.194.154'}"
         VM_PORT = "${BRANCH_NAME == 'sit' ? '58' : BRANCH_NAME == 'uat' ? '154' : BRANCH_NAME == 'prod' ? '196' : '123'}"
         VM_USER = "${BRANCH_NAME == 'sit' ? 'dimas' : BRANCH_NAME == 'uat' ? 'yudha' : BRANCH_NAME == 'prod' ? 'pratama' : 'root'}"
-        VM_ROOT_PATH = "${VM_USER == 'root' ? '/root' : `/home/${VM_USER}`}"
+        VM_ROOT_PATH = "${VM_USER == 'root' ? '/root' : '/home/${VM_USER}'}"
         VM_PASS = credentials('vm-pass')
         BOT_TOKEN = credentials('bot-token')
         GROUP_ID = credentials('group-id')
@@ -24,63 +27,82 @@ pipeline {
         gitParameter branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'BRANCH', type: 'PT_BRANCH'
     }
     stages {
-        stage('Variables for Telegram') {
-            steps {
-                script {
-                    BOT_TOKEN = "${BOT_TOKEN}"
-                    GROUP_ID = "${GROUP_ID}"
-                    TOOK = ""
-                    USER = "${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}"
-                    JOB = "${currentBuild.projectName}"
-                    ENV = "${BRANCH_NAME}"
-                    CONSOLE = "${BUILD_URL}/console"
+        stage('Preparation') {
+            parallel {
+                stage('Variable') {
+                    steps {
+                        script {
+                            BOT_TOKEN = "${BOT_TOKEN}"
+                            GROUP_ID = "${GROUP_ID}"
+                            TOOK = ""
+                            USER = "${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]['userId']}"
+                            JOB = "${currentBuild.projectName}"
+                            ENV = "${BRANCH_NAME}"
+                            CONSOLE = "${BUILD_URL}/console"
+                        }
+                    }
+                }
+                stage('Environment') {
+                    steps {
+                        sh "cp -rf .env.${BRANCH_NAME} .env"
+                    }
+                }
+                stage('Directory') {
+                    steps {
+                        sh "sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p ${VM_ROOT_PATH}/mern/server"
+                    }
+                }
+                stage('Transfer') {
+                    steps {
+                        sh """
+                            sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server
+                        """
+                    }
                 }
             }
         }
-        stage('Initialize Directory') {
-            steps {
-                sh """
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p ${VM_ROOT_PATH}/mern
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} mkdir -p ${VM_ROOT_PATH}/mern/server
-                """
-            }
-        }
-        stage('Set Environment') {
-            steps {
-                sh """
-                    cp -rf .env.${BRANCH_NAME} .env
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server
-                """
-            }
-        }
-        stage('Docker Build') {
+        stage('Build') {
             steps {
                 sh "docker build --build-arg ENV=${BRANCH_NAME} -t dimasyudha/mern-server-${BRANCH_NAME}:${APP_VERSION} ."
             }
         }
-        stage('Login to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
-                        docker login -u ${NEXUS_USER} -p ${NEXUS_PASS}
-                    """
+        stage('Registry') {
+            parallel {
+                stage('Login') {
+                    steps {
+                        withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            sh """
+                                sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+                                docker login -u ${NEXUS_USER} -p ${NEXUS_PASS}
+                            """
+                        }
+                    }
+                }
+                stage('Push') {
+                    steps {
+                        sh "docker push dimasyudha/mern-server-${BRANCH_NAME}:${APP_VERSION}"
+                    }
+                }
+                stage('Pull') {
+                    steps {
+                        sh "sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml pull"
+                    }
                 }
             }
         }
-        stage('Push Docker Image') {
-            steps {
-                sh "docker push dimasyudha/mern-server-${BRANCH_NAME}:${APP_VERSION}"
-            }
-        }
-        stage('Docker Compose') {
-            steps {
-                sh """
-                    sshpass -p '${VM_PASS}' scp -P ${VM_PORT} docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml down
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml pull
-                    sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml up -d
-                """
+        stage('Deploy') {
+            parallel {
+                stage('Destroy') {
+                    steps {
+                        sh "sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml down"
+                    }
+                }
+                stage('Run') {
+                    steps {
+                        sh "sshpass -p '${VM_PASS}' ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} -p ${VM_PORT} docker-compose -f ${VM_ROOT_PATH}/mern/server/docker-compose.yml up -d"
+                    }
+
+                }
             }
         }
     }
