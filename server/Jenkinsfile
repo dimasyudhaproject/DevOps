@@ -54,9 +54,7 @@ pipeline {
                 }
                 stage('Transfer') {
                     steps {
-                        sh """
-                            sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server
-                        """
+                        sh "sshpass -p '${VM_PASS}' scp -P ${VM_PORT} .env docker-compose.yml ${VM_USER}@${VM_IP}:${VM_ROOT_PATH}/mern/server"
                     }
                 }
             }
